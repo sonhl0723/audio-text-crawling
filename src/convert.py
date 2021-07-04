@@ -2,7 +2,7 @@
 
 import ulsan
 import seoul
-import national_assemb
+import national
 
 def select(num):
     if num == 0:
@@ -18,7 +18,7 @@ def select(num):
     elif num == 2:
         return seoul.seoul_crawling()
     elif num == 3:
-        return national_assemb.main()
+        return national.main()
 
 select_list = {
     0 : "exit",

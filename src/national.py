@@ -78,7 +78,7 @@ def check_hearingCommMenu(driver, page_flag):
             elem.click()
             time.sleep(0.25)
             return True
-        except NoSuchElementException:
+        except ElementNotInteractableException or NoSuchElementException:
             return False
     else:
         try:
@@ -140,7 +140,8 @@ def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num):
             # print(elem)
 
         if elem is None:
-            print("text not exist")
+            # print("text not exist")
+            pass
         else:
             elem=elem.split("'")
             if len(elem[3])<2:
@@ -254,15 +255,19 @@ def move_commMenu(driver, _type, main_num, num):
         # time.sleep(0.25)
         # return False
         try:
-            elem=driver.find_element_by_xpath("#"+_type+" > li) > a")
-            time.sleep(0.25)
-            elem.click()
-            time.sleep(0.25)
+            if num==1:
+                elem=driver.find_element_by_css_selector("#"+_type+" > li > a")
+                time.sleep(0.25)
+                elem.click()
+                time.sleep(0.25)
 
-            while move_content(driver, main_num, content_num):
-                content_num+=1
+                while move_content(driver, main_num, content_num):
+                    content_num+=1
+            else:
+                main_elem.click()
+                time.sleep(0.25)
             
-            return True
+            return False
         except NoSuchElementException or ElementNotInteractableException:
             main_elem.click()
             time.sleep(0.25)
@@ -335,7 +340,7 @@ def move_daeList(driver, num):
             time.sleep(0.25)
             
         while move_daeClassList(driver, daeClassList_num, page_flag):
-            print("move daeList")
+            # print("move daeList")
             daeClassList_num+=1
 
         # elem = driver.find_element_by_xpath("//*[@id='daeClassList']/ul/li[1]/a")
@@ -359,7 +364,7 @@ class Multi(threading.Thread):
 
     def run(self):
         firefox_options = webdriver.FirefoxOptions()
-        # firefox_options.add_argument('--headless')
+        firefox_options.add_argument('--headless')
         firefox_options.add_argument('--no-sandbox')
         firefox_options.add_argument('--disable-dev-shm-usage')
 
