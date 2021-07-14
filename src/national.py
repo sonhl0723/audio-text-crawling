@@ -8,11 +8,29 @@ import os
 import time
 import threading
 from pathlib import Path
+import re
 
 url_info = {"mc":[], "ct1":[], "ct2":[], "ct3":[]}
 urlinfo_index=0
 
 lock=threading.Lock()
+
+def purifyText(target):
+    onlyCharacter=re.compile('[^a-zA-Z0-9가-힣\s%]')
+    flag=False
+    if target[-1]=="." or target[-1]=="?" or target[-1]=="!":
+        flag=True
+    if target.find("(")!=-1 and target[target.find("(")+1]!="임":
+        startPoint=target.find("(")
+        endPoint=target.find(")")
+        newText1=target[:startPoint]
+        newText2=target[endPoint:]
+        target=newText1+newText2
+    
+    target=onlyCharacter.sub('',target)
+    if flag: target=target+"\n"
+
+    return target
 
 def check_confirmCommMenu(driver, page_flag):
     if page_flag:
@@ -36,27 +54,27 @@ def check_confirmCommMenu(driver, page_flag):
         except ElementNotInteractableException or NoSuchElementException:
             return False
 
-def check_subCommMenu(driver, page_flag):
-    if page_flag:
-        try:
-            # elem=driver.find_element_by_xpath("//*[@id='subCommMenu']")
-            elem=driver.find_element_by_css_selector("#subCommMenu")
-            time.sleep(0.25)
-            elem.click()
-            time.sleep(0.25)
-            return True
-        except NoSuchElementException:
-            return False
-    else:
-        try:
-            # elem=driver.find_element_by_xpath("//*[@id='subCommMenu']")
-            elem=driver.find_element_by_css_selector("#subCommMenu")
-            time.sleep(0.25)
-            elem.click()
-            time.sleep(0.25)
-            return True
-        except ElementNotInteractableException or NoSuchElementException:
-            return False
+# def check_subCommMenu(driver, page_flag):
+#     if page_flag:
+#         try:
+#             # elem=driver.find_element_by_xpath("//*[@id='subCommMenu']")
+#             elem=driver.find_element_by_css_selector("#subCommMenu")
+#             time.sleep(0.25)
+#             elem.click()
+#             time.sleep(0.25)
+#             return True
+#         except NoSuchElementException:
+#             return False
+#     else:
+#         try:
+#             # elem=driver.find_element_by_xpath("//*[@id='subCommMenu']")
+#             elem=driver.find_element_by_css_selector("#subCommMenu")
+#             time.sleep(0.25)
+#             elem.click()
+#             time.sleep(0.25)
+#             return True
+#         except ElementNotInteractableException or NoSuchElementException:
+#             return False
 
 def check_publicCommMenu(driver, page_flag):
     try:
@@ -130,13 +148,17 @@ def check_ctonly(driver, mainct_num, subct_num, sub_flag):
                         return False
 
 
-def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num):
+def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num, daeList, daeClassList, sub_title):
     try:
         if flag==1:
-            elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(content_num)+"]/span/span/a[3]").get_attribute("onclick")
+            main_elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(content_num)+"]/span/span/a[3]")
+            elem=main_elem.get_attribute("onclick")
+            text_elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(content_num)+"]/span/a")
             # print(elem)
         else:
-            elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(subct_num)+"]/ul/li["+str(content_num)+"]/span/span/a[3]").get_attribute("onclick")
+            main_elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(subct_num)+"]/ul/li["+str(content_num)+"]/span/span/a[3]")
+            elem=main_elem.get_attribute("onclick")
+            text_elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(mainct_num)+"]/div[2]/div/ul/li["+str(subct_num)+"]/ul/li["+str(content_num)+"]/span/a[1]")
             # print(elem)
 
         if elem is None:
@@ -151,6 +173,11 @@ def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num):
                     elem[5]="0"+elem[5]
             if len(elem[7])<2:
                 elem[7]="0"+elem[7]
+            
+            year=(text_elem.text.split('(')[1]).split("년")[0]
+            month=(text_elem.text.split("년")[1]).split("월")[0]
+            day=(text_elem.text.split("월")[1]).split("일")[0]
+            text_title=year+month+day
             
             lock.acquire()
 
@@ -172,7 +199,7 @@ def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num):
 
             lock.release()
 
-            thread_down=DownText(index)
+            thread_down=DownText(index, daeList, daeClassList, sub_title, text_title)
             thread_down.setDaemon(True)
             thread_down.start()
             thread_down.join()
@@ -181,7 +208,7 @@ def urlinfo_cont(driver, flag, mainct_num, subct_num, content_num):
     except NoSuchElementException:
         return False
 
-def move_subcontent(driver, mainct_num, subct_num):
+def move_subcontent(driver, mainct_num, subct_num, daeList, daeClassList, sub_title):
     content_num=1
 
     try:
@@ -193,7 +220,7 @@ def move_subcontent(driver, mainct_num, subct_num):
         
         ctonly_flag=check_ctonly(driver, mainct_num, subct_num, 1)
 
-        while urlinfo_cont(driver, ctonly_flag, mainct_num, subct_num, content_num):
+        while urlinfo_cont(driver, ctonly_flag, mainct_num, subct_num, content_num, daeList, daeClassList, sub_title):
             content_num+=1
         
         time.sleep(0.25)
@@ -203,7 +230,7 @@ def move_subcontent(driver, mainct_num, subct_num):
     except NoSuchElementException:
         return False
 
-def move_content(driver, mainct_num, content_num):
+def move_content(driver, mainct_num, content_num, daeList, daeClassList):
     subcontent_num=1
     subcontent_flag=False
     
@@ -211,17 +238,18 @@ def move_content(driver, mainct_num, content_num):
         # main_elem=driver.find_element_by_xpath("//*[@id='content']/div/ul/li["+str(content_num)+"]/div/a")
         main_elem=driver.find_element_by_css_selector("#content > div > ul > li:nth-child("+str(content_num)+") > div > a")
         time.sleep(0.25)
+        sub_title=main_elem.text
         main_elem.click()
         time.sleep(0.25)
 
-        while move_subcontent(driver, content_num, subcontent_num):
+        while move_subcontent(driver, content_num, subcontent_num, daeList, daeClassList, sub_title):
             subcontent_flag=True
             subcontent_num+=1
         
         if not subcontent_flag:
             ctonly_flag=check_ctonly(driver, content_num, 0, 0)
             content_num2=1
-            while urlinfo_cont(driver, ctonly_flag, content_num, 0, content_num2):
+            while urlinfo_cont(driver, ctonly_flag, content_num, 0, content_num2, daeList, daeClassList, None):
                 content_num2+=1
         
         time.sleep(0.25)
@@ -231,7 +259,7 @@ def move_content(driver, mainct_num, content_num):
     except NoSuchElementException:
         return False
 
-def move_commMenu(driver, _type, main_num, num):
+def move_commMenu(driver, _type, main_num, num, daeList, daeClassList):
     content_num=1
     
     try:
@@ -242,11 +270,12 @@ def move_commMenu(driver, _type, main_num, num):
         time.sleep(0.25)
         # elem=driver.find_element_by_xpath("//*[@id='"+_type+"']/li["+str(num)+"]/a")
         elem=driver.find_element_by_css_selector("#"+_type+" > li:nth-child("+str(num)+") > a")
+        daeClassList=daeClassList+"-"+driver.find_element_by_css_selector("#"+_type+" > li:nth-child("+str(num)+") > a").text
         time.sleep(0.25)
         elem.click()
         time.sleep(0.25)
         
-        while move_content(driver, main_num, content_num):
+        while move_content(driver, main_num, content_num, daeList, daeClassList):
             content_num+=1
         
         return True
@@ -257,11 +286,12 @@ def move_commMenu(driver, _type, main_num, num):
         try:
             if num==1:
                 elem=driver.find_element_by_css_selector("#"+_type+" > li > a")
+                daeClassList=daeClassList+"-"+driver.find_element_by_css_selector("#"+_type+" > li > a").text
                 time.sleep(0.25)
                 elem.click()
                 time.sleep(0.25)
 
-                while move_content(driver, main_num, content_num):
+                while move_content(driver, main_num, content_num, daeList, daeClassList):
                     content_num+=1
             else:
                 main_elem.click()
@@ -273,7 +303,7 @@ def move_commMenu(driver, _type, main_num, num):
             time.sleep(0.25)
             return False
 
-def move_daeClassList(driver, num, page_flag):
+def move_daeClassList(driver, num, page_flag, daeList):
     flag=False
     sub_flag=False
     sub_num=1
@@ -283,19 +313,24 @@ def move_daeClassList(driver, num, page_flag):
         # elem = driver.find_element_by_xpath("//*[@id='daeClassList']/ul/li["+str(num)+"]/a")
         if num==1:
             elem = driver.find_element_by_css_selector("#daeClassList > ul > li.tabover > a")
+            daeClassList=elem.text
         else:
             elem = driver.find_element_by_css_selector("#daeClassList > ul > li:nth-child("+str(num)+") > a")
+            daeClassList=elem.text
             time.sleep(0.25)
             elem.click()
             time.sleep(0.25)
+
+        if daeClassList=="소위원회" or daeClassList=="공청회" or daeClassList=="청문회" or daeClassList=="국정조사":
+            return False
         flag=True
 
         if check_confirmCommMenu(driver, page_flag):
             sub_flag=True
             _type="ulConfirmCommMenu"
-        elif check_subCommMenu(driver, page_flag):
-            sub_flag=True
-            _type="ul_realrank_area"
+        # elif check_subCommMenu(driver, page_flag):
+        #     sub_flag=True
+        #     _type="ul_realrank_area"
         elif check_publicCommMenu(driver, page_flag):
             sub_flag=True
             _type="ulPublicCommMenu"
@@ -305,10 +340,10 @@ def move_daeClassList(driver, num, page_flag):
             
         
         if sub_flag:
-            while move_commMenu(driver, _type, num, sub_num):
+            while move_commMenu(driver, _type, num, sub_num, daeList, daeClassList):
                 sub_num=sub_num+1
         else:
-            while move_content(driver, num, content_num):
+            while move_content(driver, num, content_num, daeList, daeClassList):
                 content_num+=1
                 
         
@@ -330,17 +365,18 @@ def move_daeList(driver, num):
         # elem = driver.find_element_by_xpath("//*[@id='daeList']/li["+str(num)+"]/a")
         if num<=2:
             elem = driver.find_element_by_css_selector("#daeList > li.highlighting > a")
+            daeList=elem.text.split('(')[0]
             time.sleep(0.25)
             elem.click()
             time.sleep(0.25)
         else:
             elem = driver.find_element_by_css_selector("#daeList > li:nth-child("+str(num)+") > a")
+            daeList=elem.text.split('(')[0]
             time.sleep(0.25)
             elem.click()
             time.sleep(0.25)
             
-        while move_daeClassList(driver, daeClassList_num, page_flag):
-            # print("move daeList")
+        while move_daeClassList(driver, daeClassList_num, page_flag, daeList):
             daeClassList_num+=1
 
         # elem = driver.find_element_by_xpath("//*[@id='daeClassList']/ul/li[1]/a")
@@ -387,18 +423,40 @@ class Multi(threading.Thread):
         driver.quit()
 
 class DownText(threading.Thread):
-    def __init__(self, index):
+    def __init__(self, index, daeList, daeClassList, sub_title, title):
         threading.Thread.__init__(self)
         self.index=index
+        self.daeList=daeList
+        self.daeClassList=daeClassList
+        self.sub_title=sub_title
+        self.title=title
 
     def run(self):
         ui_index=self.index
-        path = url_info["mc"][ui_index]+"."+url_info["ct1"][ui_index]+"."+url_info["ct2"][ui_index]+"."+url_info["ct3"][ui_index]+"."
-        if os.path.isdir("./data/national_assembly/"+path+"/"):
-            print("pass => "+path)
+        # path = url_info["mc"][ui_index]+"."+url_info["ct1"][ui_index]+"."+url_info["ct2"][ui_index]+"."+url_info["ct3"][ui_index]+"."
+        if not os.path.isdir("./data/national_assembly/"+self.daeList+"/"):
+            os.mkdir("./data/national_assembly/"+self.daeList+"/")
+        if not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"):
+            os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/")
+        if self.sub_title is not None and not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"):
+            os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/")
+        
+        if self.sub_title is not None and os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"):
+            print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+            pass
+        elif self.sub_title is None and os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"):
+            print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+            pass
         else:
-            os.mkdir("./data/national_assembly/"+path+"/")
-
+            if self.sub_title is None:
+                os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+                print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+                path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"
+            else:
+                os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+                print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+                path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"
+            
             firefox_options = webdriver.FirefoxOptions()
             firefox_options.add_argument('--headless')
             firefox_options.add_argument('--no-sandbox')
@@ -413,11 +471,14 @@ class DownText(threading.Thread):
             text=""
             try:
                 while True:
-                    text=text+driver.find_element_by_css_selector("#sm"+str(text_index)).text
-                    text=text+"\n"
+                    textSub=""
+                    textSub=textSub+driver.find_element_by_css_selector("#sm"+str(text_index)).text
+
+                    text=text+purifyText(textSub)
+
                     text_index+=1
             except NoSuchElementException:
-                file_path="./data/national_assembly/"+path+"/"+path+".txt"
+                file_path=path+self.title+".txt"
                 Path(file_path).touch()
                 text_file = open(file_path, "a")
                 text_file.write(text)

@@ -83,7 +83,6 @@ def seoul_crawling():
         title_index = 0
         dir_path = "./data/seoul/"+mkdir_list[url_code]
         count = 0
-        testing = -1
 
         for href_code in total_video_href:
             url = "https://ms.smc.seoul.kr/cast/viewer/record.do?key="+href_code
@@ -123,8 +122,7 @@ def seoul_crawling():
 
             Path(text_path).touch()
             text_file = open(text_path, "a")
-            # text_file.write(plecleaning_text)
-            text_file.write(video_text)
+            text_file.write(vidoe_text)
             text_file.close()
             
             title_index = title_index + 1

@@ -3,6 +3,7 @@
 import ulsan
 import seoul
 import national
+import national_sub
 
 def select(num):
     if num == 0:
@@ -19,12 +20,15 @@ def select(num):
         return seoul.seoul_crawling()
     elif num == 3:
         return national.main()
+    elif num == 4:
+        return national_sub.main()
 
 select_list = {
     0 : "exit",
     1 : "ulsan",
     2 : "seoul",
-    3 : "national assembly",
+    3 : "national assembly-only text",
+    4 : "national assembly(ph/ch/igo)-only text",
 }
 
 while(1):

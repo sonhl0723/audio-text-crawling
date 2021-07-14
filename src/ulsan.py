@@ -194,7 +194,11 @@ def ulsan_crawling():
                     title_index = title_index + 1
                     continue
                 elif not os.path.isfile(dir_path + "/" + video_title + '/ulsan_'+video_title+'.txt'):
-                    videoClip = VideoFileClip(mp4_url)
+                    try:
+                        videoClip = VideoFileClip(mp4_url)
+                    except:
+                        print("mp4 url not exist")
+                        continue
                     audioclip = videoClip.audio
                     audioclip.write_audiofile(mp3_path)
                     audioclip.close()
