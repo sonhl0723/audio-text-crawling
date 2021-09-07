@@ -12,21 +12,24 @@ import re
 
 url_info = {"mc":[], "ct1":[], "ct2":[], "ct3":[]}
 urlinfo_index=0
+testCheck=0
 
 lock=threading.Lock()
 
 def purifyText(target):
     onlyCharacter=re.compile('[^a-zA-Z0-9가-힣\s%]')
     flag=False
-    if target[-1]=="." or target[-1]=="?" or target[-1]=="!":
-        flag=True
-    if target.find("(")!=-1 and target[target.find("(")+1]!="임":
-        startPoint=target.find("(")
-        endPoint=target.find(")")
-        newText1=target[:startPoint]
-        newText2=target[endPoint:]
-        target=newText1+newText2
-    
+    if len(target)>1:
+        if target[-1]=="." or target[-1]=="?" or target[-1]=="!":
+            flag=True
+    if target.find("(")!=-1 and target.find("(")!=(len(target)-1):
+        if target[target.find("(")+1]!="임":
+            startPoint=target.find("(")
+            endPoint=target.find(")")
+            newText1=target[:startPoint]
+            newText2=target[endPoint:]
+            target=newText1+newText2
+        
     target=onlyCharacter.sub('',target)
     if flag: target=target+"\n"
 
@@ -403,8 +406,13 @@ class Multi(threading.Thread):
         firefox_options.add_argument('--headless')
         firefox_options.add_argument('--no-sandbox')
         firefox_options.add_argument('--disable-dev-shm-usage')
+        firefox_profile=webdriver.FirefoxProfile()
+        firefox_profile.set_preference("browser.cache.disk.enable", False)
+        firefox_profile.set_preference("browser.cache.memory.enable", False)
+        firefox_profile.set_preference("browser.cache.offline.enable", False)
+        firefox_profile.set_preference("network.http.use-cache", False)
 
-        driver = webdriver.Firefox(options=firefox_options, executable_path="./geckodriver")
+        driver = webdriver.Firefox(options=firefox_options, firefox_profile=firefox_profile, executable_path="./geckodriver")
         driver.get("http://likms.assembly.go.kr/record/mhs-40-010.do")
         
         daeList_num=self.start_page
@@ -441,30 +449,69 @@ class DownText(threading.Thread):
         if self.sub_title is not None and not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"):
             os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/")
         
+        flag=False
+        pathFlag=False
+
         if self.sub_title is not None and os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"):
-            print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
-            pass
+            # print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+            pathFlag=True
+            if os.path.isfile("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"+self.title+".txt"):
+                if os.path.getsize("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"+self.title+".txt")==0:
+                    # flag=True
+                    pass
+                else:
+                    flag=True
+                    print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
         elif self.sub_title is None and os.path.isdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"):
-            print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
-            pass
-        else:
+            # print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+            pathFlag=True
+            if os.path.isfile("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"+self.title+".txt"):
+                if os.path.getsize("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"+self.title+".txt")==0:
+                    # flag=True
+                    pass
+                else:
+                    flag=True
+                    print("pass ===> ./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+
+        if pathFlag==False and self.sub_title is None:
+            os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+            print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+        elif pathFlag==False and self.sub_title is not None:
+            os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+            print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+            
+        # if self.sub_title is None:
+        #     os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+        #     print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
+        #     path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"
+        # else:
+        #     os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+        #     print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
+        #     path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"
+
+        if flag==False:
+            lock.acquire()
+            global testCheck
+            testCheck+=1
+            lock.release()
+
             if self.sub_title is None:
-                os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
-                print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.title+"/")
                 path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.title+"/"
             else:
-                os.mkdir("./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
-                print("create ===> "+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/")
                 path="./data/national_assembly/"+self.daeList+"/"+self.daeClassList+"/"+self.sub_title+"/"+self.title+"/"
-            
             firefox_options = webdriver.FirefoxOptions()
             firefox_options.add_argument('--headless')
             firefox_options.add_argument('--no-sandbox')
             firefox_options.add_argument('--disable-dev-shm-usage')
+            firefox_profile=webdriver.FirefoxProfile()
+            firefox_profile.set_preference("browser.cache.disk.enable", False)
+            firefox_profile.set_preference("browser.cache.memory.enable", False)
+            firefox_profile.set_preference("browser.cache.offline.enable", False)
+            firefox_profile.set_preference("network.http.use-cache", False)
 
             url='https://w3.assembly.go.kr/jsp/vod/vod.do?cmd=vod&mc='+url_info["mc"][ui_index]+'&ct1='+url_info["ct1"][ui_index]+'&ct2='+url_info["ct2"][ui_index]+'&ct3='+url_info["ct3"][ui_index]
 
-            driver = webdriver.Firefox(options=firefox_options, executable_path="./geckodriver")
+            driver = webdriver.Firefox(options=firefox_options, firefox_profile=firefox_profile, executable_path="./geckodriver")
             driver.get(url)
 
             text_index=1
@@ -474,7 +521,9 @@ class DownText(threading.Thread):
                     textSub=""
                     textSub=textSub+driver.find_element_by_css_selector("#sm"+str(text_index)).text
 
-                    text=text+purifyText(textSub)
+                    puri=purifyText(textSub)
+                    if puri is not None:
+                        text=text+puri
 
                     text_index+=1
             except NoSuchElementException:
@@ -503,8 +552,10 @@ def main():
     thread_1.join()
     thread_2.join()
 
-    global url_info
-    print("total text : "+str(len(url_info["mc"])))
+    # global url_info
+    # print("total text : "+str(len(url_info["mc"])))
+    global testCheck
+    print("check : "+testCheck)
 
 # if __name__ == '__main__':
 #     main()

@@ -12,9 +12,10 @@ import re
 
 urlInfo = {"mc":[], "ct1":[], "ct2":[], "ct3":[], "daeClassList":[], "subContent":[], "title":[]}
 urlInfoIndex=0
+realTitle=""
+inspectFlag=False
 
 daeList=""
-text=""
 
 def defineCouncil(target):
     if target=="법사위": return "법제사법위원회"
@@ -61,35 +62,42 @@ def defineCouncil(target):
     elif target=="문방위": return "문화체육관광방송통신위원회"
 
 def purifyText(target):
-    global text
     onlyCharacter=re.compile('[^a-zA-Z0-9가-힣\s%]')
     flag=False
-    if target[-1]=="." or target[-1]=="?" or target[-1]=="!":
-        flag=True
-    if target.find("(")!=-1 and target[target.find("(")+1]!="임":
-        startPoint=target.find("(")
-        endPoint=target.find(")")
-        newText1=target[:startPoint]
-        newText2=target[endPoint:]
-        target=newText1+newText2
-    
-    text=text+onlyCharacter.sub('',target)
-    if flag: text=text+"\n"
+    if len(target)>1:
+        if target[-1]=="." or target[-1]=="?" or target[-1]=="!":
+            flag=True
+    if target.find("(")!=-1 and target.find("(")!=(len(target)-1):
+        if target[target.find("(")+1]!="임":
+            startPoint=target.find("(")
+            endPoint=target.find(")")
+            newText1=target[:startPoint]
+            newText2=target[endPoint:]
+            target=newText1+newText2
+        
+    target=onlyCharacter.sub('',target)
+    if flag: target=target+"\n"
+
+    return target
 
 def urlinfo(driver, contentIndex):
     global urlInfo
     global urlInfoIndex
     global daeList
+    global realTitle
     try:
         check=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td.td_last > a > img")
         time.sleep(0.25)
         title=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td:nth-child(1)").text.replace("-","")
         daeClassList=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td:nth-child(5)").text
-        if (daeList=="청문회" or daeList=="공청회") and len(daeClassList)>3:
+        if len(daeClassList)>3 and (daeClassList[0:3]=="청문회" or daeClassList[0:3]=="공청회"):
             daeClassList=daeClassList[0:3]
         subContent=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td:nth-child(3)").text
         subContent=defineCouncil(subContent)
 
+        if daeClassList.find("국정")!=-1:
+            realTitle=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td.td_last > a").text
+  
         elem=driver.find_element_by_css_selector("body > div.sectionBox2_03 > div > div.rightmenu > div.contenttext_box > div.doard > table > tbody > tr:nth-child("+str(contentIndex)+") > td.td_last > a").get_attribute("href")
         elem=elem.split("'")
         if len(elem[3])<2:
@@ -127,7 +135,9 @@ def urlinfo(driver, contentIndex):
     except NoSuchElementException:
         if contentIndex<=10:
             print("영상이 존재하지 않음")
-        return False
+            return True
+        else:
+            return False
 
 def moveNumberNext(driver, numberIndex):
     contentIndex=1
@@ -155,6 +165,7 @@ def moveNumberNext(driver, numberIndex):
 
 def moveSheight(driver, sheightIndex):
     numberIndex=1
+    contentIndex=1
     global daeList
 
     try:
@@ -169,6 +180,9 @@ def moveSheight(driver, sheightIndex):
 
         lastPage=int(driver.find_element_by_xpath("//*[@title='마지막 페이지']").get_attribute("href").split("'")[1].split("'")[0])
         time.sleep(0.25)
+
+        while urlinfo(driver, contentIndex):
+            contentIndex+=1
         
         while lastPage>0:
             numberIndex=moveNumberNext(driver, numberIndex)
@@ -184,12 +198,18 @@ def moveSheight(driver, sheightIndex):
         return False
 
 def moveMenuCopy():
+    global inspectFlag
     firefox_options = webdriver.FirefoxOptions()
     firefox_options.add_argument('--headless')
     firefox_options.add_argument('--no-sandbox')
     firefox_options.add_argument('--disable-dev-shm-usage')
+    firefox_profile=webdriver.FirefoxProfile()
+    firefox_profile.set_preference("browser.cache.disk.enable", False)
+    firefox_profile.set_preference("browser.cache.memory.enable", False)
+    firefox_profile.set_preference("browser.cache.offline.enable", False)
+    firefox_profile.set_preference("network.http.use-cache", False)
 
-    driver = webdriver.Firefox(options=firefox_options, executable_path="./geckodriver")
+    driver = webdriver.Firefox(options=firefox_options, firefox_profile=firefox_profile, executable_path="./geckodriver")
     driver.get("https://w3.assembly.go.kr/vod/index.jsp")
     driver.switch_to.frame(driver.find_element_by_name("down"))
 
@@ -206,8 +226,9 @@ def moveMenuCopy():
             sheightIndex=3
         
     inspectElem=driver.find_element_by_css_selector("#hederBox_01 > div.h1box_02 > ul > li:nth-child(8)")
+    inspectFlag=True
     time.sleep(0.25)
-    sheightIndex=1
+    sheightIndex=6
     inspectElem.click()
     time.sleep(0.25)
 
@@ -218,6 +239,8 @@ def moveMenuCopy():
     
 class DownText(threading.Thread):
     global urlInfo
+    global inspectFlag
+    global realTitle
 
     def __init__(self, urlInfoIndex, daeList):
         threading.Thread.__init__(self)
@@ -235,39 +258,64 @@ class DownText(threading.Thread):
         if not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"):
             os.mkdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/")
         if not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"):
-            os.mkdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/")
-        
-        if os.path.isdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"):
-            print("pass ===> ./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/")
-            pass
-        else:
+            os.mkdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/")    
+        if not os.path.isdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"):
             os.mkdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/")
-            print("create ===> "+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/")
+
+        flag=False
+        if not inspectFlag and os.path.isfile("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+title+".txt"):
+            if os.path.getsize("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+title+".txt")==0:
+                os.remove("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+title+".txt")
+                flag=True
+            else:
+                print("pass ===> ./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/")
+                pass
+        elif inspectFlag and os.path.isfile("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+realTitle+".txt"):
+            if not os.path.getsize("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+realTitle+".txt")==0:
+                os.remove("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+realTitle+".txt")
+                flag=True
+            else:
+                print("pass ===> ./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"+realTitle)
+                pass
+        if flag==True:
+            # os.mkdir("./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/")
             path="./data/national_assembly/"+self.daeList+"/"+daeClassList+"/"+subContent+"/"+title+"/"
 
             firefox_options = webdriver.FirefoxOptions()
             firefox_options.add_argument('--headless')
             firefox_options.add_argument('--no-sandbox')
             firefox_options.add_argument('--disable-dev-shm-usage')
+            firefox_profile=webdriver.FirefoxProfile()
+            firefox_profile.set_preference("browser.cache.disk.enable", False)
+            firefox_profile.set_preference("browser.cache.memory.enable", False)
+            firefox_profile.set_preference("browser.cache.offline.enable", False)
+            firefox_profile.set_preference("network.http.use-cache", False)
 
             url='https://w3.assembly.go.kr/jsp/vod/vod.do?cmd=vod&mc='+urlInfo["mc"][self.urlInfoIndex]+'&ct1='+urlInfo["ct1"][self.urlInfoIndex]+'&ct2='+urlInfo["ct2"][self.urlInfoIndex]+'&ct3='+urlInfo["ct3"][self.urlInfoIndex]
 
-            driver = webdriver.Firefox(options=firefox_options, executable_path="./geckodriver")
+            driver = webdriver.Firefox(options=firefox_options, firefox_profile=firefox_profile, executable_path="./geckodriver")
             driver.get(url)
 
             textIndex=1
-            global text
+            text=""
             try:
                 while True:
                     textSub=""
                     textSub=textSub+driver.find_element_by_css_selector("#sm"+str(textIndex)).text
+                    time.sleep(0.25)
 
-                    purifyText(textSub)
+                    puri=purifyText(textSub)
+                    if puri is not None:
+                        text=text+puri
 
                     textIndex+=1
             except NoSuchElementException:
-                file_path=path+title+".txt"
+                if inspectFlag:
+                    file_path=path+realTitle+".txt"
+                else:
+                    file_path=path+title+".txt"
                 Path(file_path).touch()
+                print("create ===> "+file_path)
                 text_file = open(file_path, "a")
                 text_file.write(text)
                 text_file.close()
