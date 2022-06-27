@@ -20,6 +20,6 @@ webdriver_option = ['--headless', '--no-sandbox', '--disable-dev-shm-usage']
 
 last_date = ["2015", "01", "02"]
 
-base_path = "../data/jtbc/"
+base_path = "./data/jtbc/"
 
 final_path = base_path+"newsRoom/"

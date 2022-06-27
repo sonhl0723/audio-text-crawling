@@ -13,4 +13,4 @@ last_date_list = {"A" : "20031219", "C010" : "20140724(3)", "C030" : "20140724",
 mkdir_list = {"A" : "real", "C010" : "operation", "C030" : "administration", "C050" : "economy", "C130" : "environment", "C163" : "physical",
 "C165" : "sanitation", "C207" : "safe", "C191" : "plan", "C200" : "traffic", "C210" : "edu", "E" : "budget", "G" : "special"}
 
-base_url = "../data/seoul/"
+base_url = "./data/seoul/"

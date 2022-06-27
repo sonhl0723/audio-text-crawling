@@ -10,7 +10,7 @@ import threading
 from pathlib import Path
 import re
 
-base_path = "../data/national_assembly/"
+base_path = "./data/national_assembly/"
 
 conf_data =\
     {

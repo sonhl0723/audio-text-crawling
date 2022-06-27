@@ -19,6 +19,6 @@ conf_data =\
         "NEWS9_URL": ["http://news.tvchosun.com/svc/vod/ospc_news_prog_pan.html?catid=2P&replay_full_new.html?catid=2P&indate=","http://news.tvchosun.com/svc/vod/replay_full_new.html?catid=2P&indate="],
     }
 
-base_path = "../data/tvchosun/"
+base_path = "./data/tvchosun/"
 
 webdriver_option = ['--headless', '--no-sandbox', '--disable-dev-shm-usage']

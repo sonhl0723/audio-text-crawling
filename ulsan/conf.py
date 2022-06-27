@@ -30,4 +30,4 @@ base_url = 'https://www.council.ulsan.kr/minutes/assembly/search/simple1.html?da
 
 select_council_url = 'http://www.council.ulsan.kr/cast/sub/list.do?bbsId=castActivityVod&commCode='
 
-base_path = '../data/ulsan/'
+base_path = './data/ulsan/'
