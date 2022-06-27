@@ -4,3 +4,7 @@ bin/
 lib/
 pyvenv.cfg
 .Python
+__pycache__/
+*.py[cod]
+geckodriver
+geckodriver.log
