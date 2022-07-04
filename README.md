@@ -23,7 +23,7 @@
 
 - 번호 혹은 글자 입력
 
-## File System
+## File Structure
 ### assembly
 <p align="center"><img src="./readme_img/assembly_result.png" width="60%" height="50%">
 
